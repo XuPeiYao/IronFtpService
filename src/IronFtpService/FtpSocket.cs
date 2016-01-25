@@ -11,21 +11,27 @@ namespace IronFtpService{
     // This project can output the Class library as a NuGet Package.
     // To enable this option, right-click on the project and select the Properties menu item. In the Build tab select "Produce outputs on build".
     public class FtpSocket{
-        Socket serviceSocket;
+        List<Socket> serviceSocket = new List<Socket>();
         List<Socket> clientSocket = new List<Socket>();
 
-        public string Host { get;private set; }
-        public int Port { get;private set; }
-        public FtpSocket(string Host = "127.0.0.1",int Port = 21){
-            this.Host = Host;
-            this.Port = Port;
+        public List<EndPoint> LocalEndPoints { get; private set; } = new List<EndPoint>();        
+        public FtpSocket(int Port = 21) : this(new IPEndPoint(IPAddress.Any,Port)) {
+            
         }
+        public FtpSocket(int Port = 21, params IPAddress[] ipAddress) : this(ipAddress.Select(item => new IPEndPoint(item, Port)).ToArray()) {
+
+        }
+        public FtpSocket(params EndPoint[] localEndPoints) {
+            LocalEndPoints.AddRange(localEndPoints);
+        }
+
+        
 
         public async Task Start() {
             serviceSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
             serviceSocket.Bind(new IPEndPoint(IPAddress.Parse(this.Host),this.Port));
             serviceSocket.Listen(64);
-
+            
             while (true) {
                 Socket newSocket = await serviceSocket.AcceptSocketAsync();
                 this.clientSocket.Add(newSocket);
@@ -40,7 +46,7 @@ namespace IronFtpService{
             StreamReader reader = new StreamReader(ioStream);
             StreamWriter writer = new StreamWriter(ioStream);
 
-            await writer.WriteLineAsync(FtpCommand.ServiceReady);
+            await writer.WriteLineAsync(FtpResponse.PositiveCompletionReply.ServiceReady.ToString());
             await writer.FlushAsync();
             string command;
             while (true) {
@@ -61,9 +67,9 @@ namespace IronFtpService{
                         break;
                 }
 
-                return await Task.FromResult(FtpCommand.CommandSuccessful);
+                return await Task.FromResult(FtpResponse.CommandSuccessful);
             } catch {
-                return await Task.FromResult(FtpCommand.)
+                return await Task.FromResult(FtpResponse.)
             }
         }
 
